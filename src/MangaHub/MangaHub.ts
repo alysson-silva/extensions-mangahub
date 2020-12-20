@@ -64,11 +64,13 @@ export class MangaHub extends Source {
         JSON.stringify(metadata)
     );
 
-    if (data?.data?.chapter == null) {
+    let parsedData = JSON.parse(data);
+
+    if (parsedData?.data?.chapter == null) {
       throw "Found no chapter details.";
     }
 
-    const chapterDetail = data.data.chapter;
+    const chapterDetail = parsedData.data.chapter;
 
     return createChapterDetails({
       id: metadata.chapterId,
@@ -96,7 +98,7 @@ export class MangaHub extends Source {
       headers: {
         "content-type": "application/json",
       },
-      data: {
+      data: JSON.stringify({
         query: `
         {
             chapter(x: m01, slug: "${mangaId}", number: ${chapId}) {
@@ -111,7 +113,7 @@ export class MangaHub extends Source {
               }
             }
           }`,
-      },
+      }),
     });
   }
 
@@ -124,11 +126,13 @@ export class MangaHub extends Source {
         JSON.stringify(metadata)
     );
 
-    if (data?.data?.manga?.chapters == null) {
+    let parsedData = JSON.parse(data);
+
+    if (parsedData?.data?.manga?.chapters == null) {
       return [];
     }
 
-    return data.data.manga.chapters.map((chapter: any) => {
+    return parsedData.data.manga.chapters.map((chapter: any) => {
       return createChapter({
         chapNum: chapter.number,
         id: chapter.number,
@@ -150,7 +154,7 @@ export class MangaHub extends Source {
       headers: {
         "content-type": "application/json",
       },
-      data: {
+      data: JSON.stringify({
         query: `
         {
             manga(x: m01, slug: "${mangaId}") {
@@ -163,7 +167,7 @@ export class MangaHub extends Source {
               }
             }
           }`,
-      },
+      }),
     });
   }
 
@@ -176,12 +180,14 @@ export class MangaHub extends Source {
         JSON.stringify(metadata)
     );
 
-    if (data?.data?.manga == null) {
+    let parsedData = JSON.parse(data);
+
+    if (parsedData?.data?.manga == null) {
       return [];
     }
 
     let mangas: Manga[] = [];
-    let manga = data.data.manga;
+    let manga = parsedData.data.manga;
     let genres = (manga.genres.split(", ") as string[]).map((g) =>
       createTag({ id: g, label: g })
     );
@@ -218,7 +224,7 @@ export class MangaHub extends Source {
         url: MANGAHUB_API,
         method: "POST",
         metadata: { id: id },
-        data: {
+        data: JSON.stringify({
           query: `
             {
                 manga(x: m01, slug: "${id}") {
@@ -237,7 +243,7 @@ export class MangaHub extends Source {
                   updatedDate
                 }
             }`,
-        },
+        }),
       })
     );
   }
@@ -251,12 +257,14 @@ export class MangaHub extends Source {
         JSON.stringify(metadata)
     );
 
-    if (data?.data?.search?.rows == null) {
+    let parsedData = JSON.parse(data);
+
+    if (parsedData?.data?.search?.rows == null) {
       return null;
     }
 
     return createPagedResults({
-      results: data.data.search.rows.map((r: any) => {
+      results: parsedData.data.search.rows.map((r: any) => {
         return createMangaTile({
           id: r.slug,
           image: MangaHub.buildUrl(MANGAHUB_CDN, r.image),
@@ -277,7 +285,7 @@ export class MangaHub extends Source {
       headers: {
         "content-type": "application/json",
       },
-      data: {
+      data: JSON.stringify({
         query: `
         {
             search(x: m01, q: "${query.title}", genre: "all", mod: POPULAR, count: true, offset: 0) {
@@ -294,7 +302,7 @@ export class MangaHub extends Source {
               count
             }
           }`,
-      },
+      }),
     });
   }
 
@@ -304,7 +312,7 @@ export class MangaHub extends Source {
         request: createRequestObject({
           url: MANGAHUB_API,
           method: "POST",
-          data: {
+          data: JSON.stringify({
             query: `
             {
                 latestPopular(x: m01) {
@@ -316,7 +324,7 @@ export class MangaHub extends Source {
                   updatedDate
                 }
             }`,
-          },
+          }),
         }),
         sections: [
           createHomeSection({
@@ -337,11 +345,13 @@ export class MangaHub extends Source {
         JSON.stringify(section)
     );
 
-    if (data?.data?.latestPopular) {
+    let parsedData = JSON.parse(data);
+
+    if (parsedData?.data?.latestPopular) {
       return null;
     }
 
-    let mangas = data.data.latestPopular;
+    let mangas = parsedData.data.latestPopular;
 
     const tiles: MangaTile[] = [];
     for (let manga of mangas) {
