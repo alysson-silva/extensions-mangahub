@@ -116,7 +116,7 @@ export class MangaHub extends Source {
     }
 
     get icon(): string {
-        return "";
+        return "icon.png";
     }
 
     get name(): string {
