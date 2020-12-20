@@ -519,10 +519,11 @@ class MangaHub extends paperback_extensions_common_1.Source {
             JSON.stringify(data) +
             "metadata:" +
             JSON.stringify(metadata));
-        if (((_a = data === null || data === void 0 ? void 0 : data.data) === null || _a === void 0 ? void 0 : _a.chapter) == null) {
+        let parsedData = JSON.parse(data);
+        if (((_a = parsedData === null || parsedData === void 0 ? void 0 : parsedData.data) === null || _a === void 0 ? void 0 : _a.chapter) == null) {
             throw "Found no chapter details.";
         }
-        const chapterDetail = data.data.chapter;
+        const chapterDetail = parsedData.data.chapter;
         return createChapterDetails({
             id: metadata.chapterId,
             longStrip: chapterDetail.manga.isWebtoon,
@@ -543,7 +544,7 @@ class MangaHub extends paperback_extensions_common_1.Source {
             headers: {
                 "content-type": "application/json",
             },
-            data: {
+            data: JSON.stringify({
                 query: `
         {
             chapter(x: m01, slug: "${mangaId}", number: ${chapId}) {
@@ -558,7 +559,7 @@ class MangaHub extends paperback_extensions_common_1.Source {
               }
             }
           }`,
-            },
+            }),
         });
     }
     getChapters(data, metadata) {
@@ -568,10 +569,11 @@ class MangaHub extends paperback_extensions_common_1.Source {
             JSON.stringify(data) +
             "metadata:" +
             JSON.stringify(metadata));
-        if (((_b = (_a = data === null || data === void 0 ? void 0 : data.data) === null || _a === void 0 ? void 0 : _a.manga) === null || _b === void 0 ? void 0 : _b.chapters) == null) {
+        let parsedData = JSON.parse(data);
+        if (((_b = (_a = parsedData === null || parsedData === void 0 ? void 0 : parsedData.data) === null || _a === void 0 ? void 0 : _a.manga) === null || _b === void 0 ? void 0 : _b.chapters) == null) {
             return [];
         }
-        return data.data.manga.chapters.map((chapter) => {
+        return parsedData.data.manga.chapters.map((chapter) => {
             return createChapter({
                 chapNum: chapter.number,
                 id: chapter.number,
@@ -591,7 +593,7 @@ class MangaHub extends paperback_extensions_common_1.Source {
             headers: {
                 "content-type": "application/json",
             },
-            data: {
+            data: JSON.stringify({
                 query: `
         {
             manga(x: m01, slug: "${mangaId}") {
@@ -604,7 +606,7 @@ class MangaHub extends paperback_extensions_common_1.Source {
               }
             }
           }`,
-            },
+            }),
         });
     }
     getMangaDetails(data, metadata) {
@@ -614,11 +616,12 @@ class MangaHub extends paperback_extensions_common_1.Source {
             JSON.stringify(data) +
             "metadata:" +
             JSON.stringify(metadata));
-        if (((_a = data === null || data === void 0 ? void 0 : data.data) === null || _a === void 0 ? void 0 : _a.manga) == null) {
+        let parsedData = JSON.parse(data);
+        if (((_a = parsedData === null || parsedData === void 0 ? void 0 : parsedData.data) === null || _a === void 0 ? void 0 : _a.manga) == null) {
             return [];
         }
         let mangas = [];
-        let manga = data.data.manga;
+        let manga = parsedData.data.manga;
         let genres = manga.genres.split(", ").map((g) => createTag({ id: g, label: g }));
         mangas.push(createManga({
             titles: manga.title,
@@ -643,7 +646,7 @@ class MangaHub extends paperback_extensions_common_1.Source {
             url: MANGAHUB_API,
             method: "POST",
             metadata: { id: id },
-            data: {
+            data: JSON.stringify({
                 query: `
             {
                 manga(x: m01, slug: "${id}") {
@@ -662,7 +665,7 @@ class MangaHub extends paperback_extensions_common_1.Source {
                   updatedDate
                 }
             }`,
-            },
+            }),
         }));
     }
     search(data, metadata) {
@@ -672,11 +675,12 @@ class MangaHub extends paperback_extensions_common_1.Source {
             JSON.stringify(data) +
             "metadata:" +
             JSON.stringify(metadata));
-        if (((_b = (_a = data === null || data === void 0 ? void 0 : data.data) === null || _a === void 0 ? void 0 : _a.search) === null || _b === void 0 ? void 0 : _b.rows) == null) {
+        let parsedData = JSON.parse(data);
+        if (((_b = (_a = parsedData === null || parsedData === void 0 ? void 0 : parsedData.data) === null || _a === void 0 ? void 0 : _a.search) === null || _b === void 0 ? void 0 : _b.rows) == null) {
             return null;
         }
         return createPagedResults({
-            results: data.data.search.rows.map((r) => {
+            results: parsedData.data.search.rows.map((r) => {
                 return createMangaTile({
                     id: r.slug,
                     image: MangaHub.buildUrl(MANGAHUB_CDN, r.image),
@@ -695,7 +699,7 @@ class MangaHub extends paperback_extensions_common_1.Source {
             headers: {
                 "content-type": "application/json",
             },
-            data: {
+            data: JSON.stringify({
                 query: `
         {
             search(x: m01, q: "${query.title}", genre: "all", mod: POPULAR, count: true, offset: 0) {
@@ -712,7 +716,7 @@ class MangaHub extends paperback_extensions_common_1.Source {
               count
             }
           }`,
-            },
+            }),
         });
     }
     getHomePageSectionRequest() {
@@ -721,7 +725,7 @@ class MangaHub extends paperback_extensions_common_1.Source {
                 request: createRequestObject({
                     url: MANGAHUB_API,
                     method: "POST",
-                    data: {
+                    data: JSON.stringify({
                         query: `
             {
                 latestPopular(x: m01) {
@@ -733,7 +737,7 @@ class MangaHub extends paperback_extensions_common_1.Source {
                   updatedDate
                 }
             }`,
-                    },
+                    }),
                 }),
                 sections: [
                     createHomeSection({
@@ -751,10 +755,11 @@ class MangaHub extends paperback_extensions_common_1.Source {
             JSON.stringify(data) +
             "section:" +
             JSON.stringify(section));
-        if ((_a = data === null || data === void 0 ? void 0 : data.data) === null || _a === void 0 ? void 0 : _a.latestPopular) {
+        let parsedData = JSON.parse(data);
+        if ((_a = parsedData === null || parsedData === void 0 ? void 0 : parsedData.data) === null || _a === void 0 ? void 0 : _a.latestPopular) {
             return null;
         }
-        let mangas = data.data.latestPopular;
+        let mangas = parsedData.data.latestPopular;
         const tiles = [];
         for (let manga of mangas) {
             tiles.push(createMangaTile({
