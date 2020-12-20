@@ -13,31 +13,89 @@ import {
   Source,
 } from "paperback-extensions-common";
 
+const MANGAHUB_URL = "https://mangahub.io";
+const MANGAHUB_API = "https://api.mghubcdn.com/graphql";
+const MANGAHUB_CDN = "https://thumb.mghubcdn.com";
+const MANGAHUB_CDN2 = "https://img.mghubcdn.com/file/imghub";
+
 export class MangaHub extends Source {
+  get version(): string {
+    return new Date().getTime().toString();
+  }
+
   get author(): string {
     return "Alysson Souza e Silva";
+  }
+
+  get authorWebsite(): string {
+    return "https://github.com/alysson-silva/paperback-extensions";
   }
 
   get description(): string {
     return "MangaHub.io extension";
   }
 
+  get hentaiSource(): boolean {
+    return false;
+  }
+
+  get icon(): string {
+    return "icon.png";
+  }
+
+  get name(): string {
+    return "MangaHub";
+  }
+
+  get websiteBaseURL(): string {
+    return MANGAHUB_URL;
+  }
+
+  private static buildUrl(base: string, path: any) {
+    return `${base}/${path}`;
+  }
+
   getChapterDetails(data: any, metadata: any): ChapterDetails {
+    console.log(
+      "========== getChapterDetails:" +
+        "data:" +
+        JSON.stringify(data) +
+        "metadata:" +
+        JSON.stringify(metadata)
+    );
+
+    if (data?.data?.chapter == null) {
+      throw "Found no chapter details.";
+    }
+
     const chapterDetail = data.data.chapter;
 
     return createChapterDetails({
       id: metadata.chapterId,
       longStrip: chapterDetail.manga.isWebtoon,
       mangaId: metadata.mangaId,
-      pages: JSON.parse(chapterDetail.pages),
+      pages: Object.values(JSON.parse(chapterDetail.pages)).map((path) =>
+        MangaHub.buildUrl(MANGAHUB_CDN2, path)
+      ),
     });
   }
 
   getChapterDetailsRequest(mangaId: string, chapId: string): Request {
+    console.log(
+      "========== getChapterDetailsRequest:" +
+        "mangaId:" +
+        mangaId +
+        "chapId" +
+        chapId
+    );
+
     return createRequestObject({
-      url: "https://api.mghubcdn.com/graphql",
+      url: MANGAHUB_API,
       method: "POST",
       metadata: { mangaId: mangaId, chapterId: chapId },
+      headers: {
+        "content-type": "application/json",
+      },
       data: {
         query: `
         {
@@ -58,29 +116,40 @@ export class MangaHub extends Source {
   }
 
   getChapters(data: any, metadata: any): Chapter[] {
-    let chapters: Chapter[] = [];
+    console.log(
+      "========== getChapters:" +
+        "data:" +
+        JSON.stringify(data) +
+        "metadata:" +
+        JSON.stringify(metadata)
+    );
 
-    for (const c of data.data.manga.chapters) {
-      chapters.push(
-        createChapter({
-          chapNum: c.number.toString(),
-          id: c.number.toString(),
-          langCode: LanguageCode.ENGLISH,
-          mangaId: metadata.id,
-          name: c.title,
-          time: c.date,
-        })
-      );
+    if (data?.data?.manga?.chapters == null) {
+      return [];
     }
 
-    return chapters;
+    return data.data.manga.chapters.map((chapter: any) => {
+      return createChapter({
+        chapNum: chapter.number,
+        id: chapter.number,
+        langCode: LanguageCode.ENGLISH,
+        mangaId: metadata.id,
+        name: chapter.title,
+        time: chapter.date,
+      });
+    });
   }
 
   getChaptersRequest(mangaId: string): Request {
+    console.log("========== getChaptersRequest:" + "mangaId:" + mangaId);
+
     return createRequestObject({
-      url: "https://api.mghubcdn.com/graphql",
+      url: MANGAHUB_API,
       method: "POST",
       metadata: { id: mangaId },
+      headers: {
+        "content-type": "application/json",
+      },
       data: {
         query: `
         {
@@ -99,9 +168,23 @@ export class MangaHub extends Source {
   }
 
   getMangaDetails(data: any, metadata: any): Manga[] {
+    console.log(
+      "========== getMangaDetails:" +
+        "data:" +
+        JSON.stringify(data) +
+        "metadata:" +
+        JSON.stringify(metadata)
+    );
+
+    if (data?.data?.manga == null) {
+      return [];
+    }
+
     let mangas: Manga[] = [];
     let manga = data.data.manga;
-    let genres = (manga.genres.split(", ") as string[]).map((g) => createTag({ id: g, label: g }));
+    let genres = (manga.genres.split(", ") as string[]).map((g) =>
+      createTag({ id: g, label: g })
+    );
 
     mangas.push(
       createManga({
@@ -110,9 +193,12 @@ export class MangaHub extends Source {
         author: manga.author,
         hentai: manga.isYaoi || manga.isPorn || manga.isSoftPorn,
         id: metadata.id,
-        image: this.websiteBaseURL + "/" + manga.image,
+        image: MangaHub.buildUrl(MANGAHUB_CDN, manga.image),
         rating: 0,
-        status: manga.status == "ongoing" ? MangaStatus.ONGOING : MangaStatus.COMPLETED,
+        status:
+          manga.status == "ongoing"
+            ? MangaStatus.ONGOING
+            : MangaStatus.COMPLETED,
         tags: [createTagSection({ id: "1", label: "genres", tags: genres })],
         desc: manga.description,
         lastUpdate: manga.updatedDate,
@@ -123,16 +209,17 @@ export class MangaHub extends Source {
   }
 
   getMangaDetailsRequest(ids: string[]): Request[] {
-    let requests: Request[] = [];
+    console.log(
+      "========== getMangaDetailsRequest:" + "ids:" + JSON.stringify(ids)
+    );
 
-    for (let id of ids) {
-      requests.push(
-        createRequestObject({
-          url: "https://api.mghubcdn.com/graphql",
-          method: "POST",
-          metadata: { id: id },
-          data: {
-            query: `
+    return ids.map((id) =>
+      createRequestObject({
+        url: MANGAHUB_API,
+        method: "POST",
+        metadata: { id: id },
+        data: {
+          query: `
             {
                 manga(x: m01, slug: "${id}") {
                   id
@@ -149,51 +236,47 @@ export class MangaHub extends Source {
                   isSoftPorn
                   updatedDate
                 }
-              }`,
-          },
-        })
-      );
-    }
-
-    return requests;
-  }
-
-  get hentaiSource(): boolean {
-    return false;
-  }
-
-  get icon(): string {
-    return "icon.png";
-  }
-
-  get name(): string {
-    return "MangaHub";
+            }`,
+        },
+      })
+    );
   }
 
   search(data: any, metadata: any): PagedResults | null {
-    const rows = data.data.search.rows;
+    console.log(
+      "==========  search:" +
+        "data:" +
+        JSON.stringify(data) +
+        "metadata:" +
+        JSON.stringify(metadata)
+    );
 
-    let mangas = [];
-    for (let row of rows) {
-      mangas.push(
-        createMangaTile({
-          id: row.slug,
-          image: this.websiteBaseURL + "/" + row.image,
-          title: row.title,
-        })
-      );
+    if (data?.data?.search?.rows == null) {
+      return null;
     }
 
     return createPagedResults({
-      results: mangas,
-      nextPage: undefined,
+      results: data.data.search.rows.map((r: any) => {
+        return createMangaTile({
+          id: r.slug,
+          image: MangaHub.buildUrl(MANGAHUB_CDN, r.image),
+          title: createIconText(r.title),
+        });
+      }),
     });
   }
 
   searchRequest(query: SearchRequest): Request | null {
+    if (query.title == null) {
+      return null;
+    }
+
     return createRequestObject({
-      url: "https://api.mghubcdn.com/graphql",
+      url: MANGAHUB_API,
       method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
       data: {
         query: `
         {
@@ -215,19 +298,11 @@ export class MangaHub extends Source {
     });
   }
 
-  get version(): string {
-    return "1.1";
-  }
-
-  get websiteBaseURL(): string {
-    return "https://mangahub.io";
-  }
-
   getHomePageSectionRequest(): HomeSectionRequest[] | null {
     return [
       createHomeSectionRequest({
         request: createRequestObject({
-          url: "https://api.mghubcdn.com/graphql",
+          url: MANGAHUB_API,
           method: "POST",
           data: {
             query: `
@@ -254,15 +329,27 @@ export class MangaHub extends Source {
   }
 
   getHomePageSections(data: any, section: HomeSection[]): HomeSection[] | null {
+    console.log(
+      "==========  getHomePageSections:" +
+        "data:" +
+        JSON.stringify(data) +
+        "section:" +
+        JSON.stringify(section)
+    );
+
+    if (data?.data?.latestPopular) {
+      return null;
+    }
+
     let mangas = data.data.latestPopular;
 
-    var tiles: MangaTile[] = [];
+    const tiles: MangaTile[] = [];
     for (let manga of mangas) {
       tiles.push(
         createMangaTile({
           id: manga.id,
           title: manga.title,
-          image: this.websiteBaseURL + "/" + manga.image,
+          image: MangaHub.buildUrl(MANGAHUB_CDN, manga.image),
         })
       );
     }

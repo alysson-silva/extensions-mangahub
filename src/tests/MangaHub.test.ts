@@ -1,6 +1,6 @@
 import cheerio from "cheerio";
 import { MangaHub } from "../MangaHub/MangaHub";
-import { APIWrapper, Source } from "paperback-extensions-common";
+import { APIWrapper, MangaStatus, Source } from "paperback-extensions-common";
 
 describe("MangaHub Tests", function () {
   var wrapper: APIWrapper = new APIWrapper();
@@ -20,18 +20,22 @@ describe("MangaHub Tests", function () {
 
   it("Retrieve Manga Details", async () => {
     let details = await wrapper.getMangaDetails(source, [mangaId]);
-    expect(details, "No results found with test-defined ID [" + mangaId + "]").to.be.an("array");
+    expect(
+      details,
+      "No results found with test-defined ID [" + mangaId + "]"
+    ).to.be.an("array");
     expect(details).to.not.have.lengthOf(0, "Empty response from server");
 
     // Validate that the fields are filled
     let data = details[0];
-    expect(data.id, "Missing ID").to.be.not.empty;
-    expect(data.image, "Missing Image").to.be.not.empty;
-    expect(data.status, "Missing Status").to.exist;
-    expect(data.author, "Missing Author").to.be.not.empty;
-    expect(data.desc, "Missing Description").to.be.not.empty;
-    expect(data.titles, "Missing Titles").to.be.not.empty;
-    expect(data.rating, "Missing Rating").to.exist;
+    expect(data.id, "Missing ID").to.equal("red-storm_123");
+    expect(data.image, "Missing Image").to.equal(
+      "https://thumb.mghubcdn.com/mn/red-storm.jpg"
+    );
+    expect(data.status, "Missing Status").to.equal(MangaStatus.ONGOING);
+    expect(data.author, "Missing Author").to.equal("Cyungchan Noh");
+    expect(data.desc, "Missing Description").to.not.be.empty;
+    expect(data.titles, "Missing Titles").to.equal("Red Storm");
   });
 
   it("Get Chapters", async () => {
@@ -40,10 +44,10 @@ describe("MangaHub Tests", function () {
     expect(data, "No chapters present for: [" + mangaId + "]").to.not.be.empty;
 
     let entry = data[0];
-    expect(entry.id, "No ID present").to.not.be.empty;
+    expect(entry.id, "No ID present").to.be.gte(0);
     expect(entry.time, "No date present").to.not.be.empty;
     expect(entry.name, "No title available").to.not.be.empty;
-    expect(entry.chapNum, "No chapter number present").to.not.be.empty;
+    expect(entry.chapNum, "No chapter number present").to.be.gte(0);
   });
 
   it("Get Chapter Details", async () => {
@@ -53,14 +57,14 @@ describe("MangaHub Tests", function () {
     expect(data, "No server response").to.exist;
     expect(data, "Empty server response").to.not.be.empty;
 
-    expect(data.id, "Missing ID").to.be.not.empty;
+    expect(data.id, "Missing ID").to.be.gte(0);
     expect(data.mangaId, "Missing MangaID").to.be.not.empty;
     expect(data.pages, "No pages present").to.be.not.empty;
   });
 
   it("Testing search", async () => {
     let testSearch = createSearchRequest({
-      title: "Boyfriend",
+      title: "red storm",
     });
 
     let search = await wrapper.search(source, testSearch, 1);
@@ -68,14 +72,15 @@ describe("MangaHub Tests", function () {
 
     expect(result, "No response from server").to.exist;
 
-    expect(result.id, "No ID found for search query").to.be.not.empty;
-    expect(result.image, "No image found for search").to.be.not.empty;
-    expect(result.title, "No title").to.be.not.null;
-    expect(result.subtitleText, "No subtitle text").to.be.not.null;
+    expect(result.id, "No ID found for search query").to.equal("red-storm_123");
+    expect(result.image, "No image found for search").to.equal(
+      "https://thumb.mghubcdn.com/mn/red-storm.jpg"
+    );
+    expect(result.title, "No title").to.equal("Red Storm");
   });
 
   it("Testing Home-Page aquisition", async () => {
     let homePages = await wrapper.getHomePageSections(source);
-    expect(homePages, "No response from server").to.exist;
+    expect(homePages, "No response from server").to.be.not.null;
   });
 });
